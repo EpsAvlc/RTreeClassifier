@@ -33,3 +33,6 @@
 
 build/
 small_training_set/
+
+.vscode/
+pics/

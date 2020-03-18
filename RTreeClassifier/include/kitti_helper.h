@@ -10,6 +10,7 @@
 #include <iostream>
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
+#include <Eigen/Core>
 
 class KITTIHelper
 {
@@ -26,6 +27,10 @@ public:
     void ReadPointCloud(const std::string& infile, 
     pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud_ptr);
     void ParseLabel(const std::string& infile, std::vector<BBox>& bboxes);
+    void ParseCalib(const std::string& infile, Eigen::MatrixXf& velo_to_cam, Eigen::Matrix3f& R0_rect);
+    void ExtractClusters(const std::string& cloudfile, 
+        const std::string& labelfile, const std::string& calibfile,
+        std::vector<pcl::PointCloud<pcl::PointXYZI>::Ptr>& clusters);
 
 private:
     void split(std::string& s, char delim, std::vector<std::string>& strs);

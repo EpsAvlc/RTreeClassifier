@@ -12,7 +12,12 @@
 #include <fstream> 
 #include <string>
 
+#include <Eigen/Dense>
+#include <pcl/filters/passthrough.h>
+#include <pcl/filters/crop_box.h>
+
 using namespace std;
+using namespace pcl;
 
 void KITTIHelper::ReadPointCloud(const std::string& infile, 
     pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud_ptr)
@@ -54,7 +59,7 @@ void KITTIHelper::ReadPointCloud(const std::string& infile,
                      detection, needed for p/r curves, higher is better.
 */
 
-void KITTIHelper::ParseLabel(const std::string& infile, vector<BBox>& bboxes)
+void KITTIHelper::ParseLabel(const std::string& infile, std::vector<BBox>& bboxes)
 {
 	bboxes.clear();
 	fstream input(infile.c_str(), ios::in);
@@ -107,7 +112,18 @@ void KITTIHelper::ParseLabel(const std::string& infile, vector<BBox>& bboxes)
 		}
 
 		bbox.height = atof(bbox_strs[8].c_str());
+		bbox.width = atof(bbox_strs[9].c_str());
+		bbox.length = atof(bbox_strs[10].c_str());
 
+		bbox.x = atof(bbox_strs[11].c_str());
+		bbox.y = atof(bbox_strs[12].c_str());
+		bbox.z = atof(bbox_strs[13].c_str());
+		bbox.rot = atof(bbox_strs[14].c_str());
+
+		// the position in the label is w.r.t the camera frame.
+		// Transform it into LiDAR frame
+
+		bboxes.push_back(bbox);
 	}
 	input.close();
 }
@@ -128,4 +144,113 @@ void KITTIHelper::split(string& s, char delim, vector<string>& strs)
 
     // Add the last one
     strs.push_back( s.substr(initialPos, min( pos, s.size() ) - initialPos + 1 ) );
+}
+
+void KITTIHelper::ParseCalib(const std::string& infile, Eigen::MatrixXf& velo_to_cam, Eigen::Matrix3f& R0_rect)
+{
+	fstream input(infile, ios::in);
+	
+	string s;
+	for(int i = 0; i < 5; i++)
+	{
+		getline(input, s);
+	}
+	vector<string> strs;
+	split(s, ' ', strs);
+	R0_rect = Eigen::Matrix3f::Zero();
+	for(int i = 0; i < 9; i++)
+	{
+		R0_rect(i) = atof(strs[i+1].c_str());
+	}
+	R0_rect.transposeInPlace();
+
+	getline(input, s);
+	split(s, ' ', strs);
+	velo_to_cam = Eigen::MatrixXf::Zero(4, 3);
+	for(int i = 0; i < 12; i++)
+	{
+		velo_to_cam(i) = atof(strs[i+1].c_str());
+	}
+	velo_to_cam.transposeInPlace();
+	// cout <<velo_to_cam << endl;
+}
+
+void KITTIHelper::ExtractClusters(const std::string& cloudfile, 
+        const std::string& labelfile, const std::string& calibfile,
+        std::vector<pcl::PointCloud<pcl::PointXYZI>::Ptr>& clusters)
+{
+	PointCloud<PointXYZI>::Ptr cloud(new PointCloud<PointXYZI>);
+    ReadPointCloud(cloudfile, cloud); 
+
+    vector<KITTIHelper::BBox> bboxes;
+    ParseLabel(labelfile, bboxes);
+    
+    Eigen::MatrixXf velo2cam;
+	Eigen::Matrix3f R0_rect;
+    ParseCalib(calibfile, velo2cam, R0_rect);
+
+	Eigen::MatrixXf cam2velo = Eigen::MatrixXf::Zero(3,4);
+	cam2velo.block(0, 0, 3, 3) = velo2cam.block(0, 0, 3, 3).transpose();
+	cam2velo.block(0, 3, 3, 1) = -velo2cam.block(0, 0, 3, 3).transpose() * 
+		velo2cam.block(0, 3, 3, 1);
+
+	for(int i = 0; i < bboxes.size(); i++)
+	{
+		float l = bboxes[i].length;
+		float w = bboxes[i].width;
+		float h = bboxes[i].height;
+		float rot = bboxes[i].rot;
+		Eigen::MatrixXf pts_rect = Eigen::MatrixXf::Zero(3, 8);
+
+		pts_rect << l * 0.5, l * 0.5, -l * 0.5, -l/2., l/2., l/2., -l/2., -l/2.,
+			0, 0, 0, 0, -h, -h, -h, -h,
+			w/2, -w/2, -w/2, w/2, w/2, -w/2, -w/2, w/2;
+		// cout << "pts_rect: " << endl << pts_rect << endl; 
+		Eigen::Matrix3f rot_rect;
+		rot_rect << cos(rot), 0, sin(rot),
+				0, 1, 0,
+				-sin(rot), 0, cos(rot);
+		pts_rect = rot_rect * pts_rect;
+		for(int j = 0; j < 8; j++)
+		{
+			pts_rect(0, j) += bboxes[i].x;
+			pts_rect(1, j) += bboxes[i].y;
+			pts_rect(2, j) += bboxes[i].z;
+		}
+
+		Eigen::MatrixXf pts_ref = R0_rect.inverse() * pts_rect;
+		Eigen::MatrixXf pts_l_homo = Eigen::MatrixXf::Ones(4, 8); 
+
+		pts_l_homo.block(0, 0, 3, 8) = pts_ref;
+		Eigen::MatrixXf pts_l;
+		pts_l = cam2velo * pts_l_homo;
+
+		float x_min = 1000, x_max = -1000, y_min = 1000, 
+			y_max = -1000, z_min = 1000, z_max = -1000;
+		for(int j = 0; j < 8; j++)
+		{
+			if(pts_l(0, j) < x_min)
+				x_min = pts_l(0, j);
+			if(pts_l(1, j) < y_min)
+				y_min = pts_l(1, j);
+			if(pts_l(2, j) < z_min)
+				z_min = pts_l(2, j);
+			
+			if(pts_l(0, j) > x_max)
+				x_max = pts_l(0, j);
+			if(pts_l(1, j) > y_max)
+				y_max = pts_l(1, j);
+			if(pts_l(2, j) > z_max)
+				z_max = pts_l(2, j);
+		}
+
+		pcl::CropBox<PointXYZI> cb;
+		PointCloud<PointXYZI>::Ptr cluster(new PointCloud<PointXYZI>);
+		cb.setInputCloud(cloud);
+		cb.setMin(Eigen::Vector4f(x_min, y_min, z_min, 0));
+		cb.setMax(Eigen::Vector4f(x_max, y_max, z_max, 0));
+		cb.filter(*cluster);
+
+		clusters.push_back(cluster);
+	}
 }
