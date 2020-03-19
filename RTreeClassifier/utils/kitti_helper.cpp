@@ -15,6 +15,7 @@
 #include <Eigen/Dense>
 #include <pcl/filters/passthrough.h>
 #include <pcl/filters/crop_box.h>
+#include <pcl/common/centroid.h>
 
 using namespace std;
 using namespace pcl;
@@ -182,6 +183,9 @@ void KITTIHelper::ExtractClusters(const std::string& cloudfile,
 	PointCloud<PointXYZI>::Ptr cloud(new PointCloud<PointXYZI>);
     ReadPointCloud(cloudfile, cloud); 
 
+	PointCloud<PointXYZI>::Ptr cloud_no_ground(new PointCloud<PointXYZI>);
+	RemoveGround(cloud, cloud_no_ground);
+
     vector<KITTIHelper::BBox> bboxes;
     ParseLabel(labelfile, bboxes);
     
@@ -246,11 +250,67 @@ void KITTIHelper::ExtractClusters(const std::string& cloudfile,
 
 		pcl::CropBox<PointXYZI> cb;
 		PointCloud<PointXYZI>::Ptr cluster(new PointCloud<PointXYZI>);
-		cb.setInputCloud(cloud);
+		cb.setInputCloud(cloud_no_ground);
 		cb.setMin(Eigen::Vector4f(x_min, y_min, z_min, 0));
 		cb.setMax(Eigen::Vector4f(x_max, y_max, z_max, 0));
 		cb.filter(*cluster);
 
 		clusters.push_back(cluster);
 	}
+}
+
+void KITTIHelper::RemoveGround(pcl::PointCloud<pcl::PointXYZI>::Ptr ori_cloud, 
+	pcl::PointCloud<pcl::PointXYZI>::Ptr filtered_cloud)
+{
+	sort(ori_cloud->points.begin(), ori_cloud->points.end(), 
+	[](const pcl::PointXYZI& lhs, const pcl::PointXYZI& rhs)
+	{ 
+		return lhs.z < rhs.z;
+	});
+
+    double LPR_height = 0; // Lowest Point Represent.
+    /* get mean point of LPR */
+	int n_lpr = ori_cloud->size() / 5;
+    for(int i = 0; i < n_lpr; i ++)
+    {
+        LPR_height += ori_cloud->points[i].z;
+    }
+    LPR_height /= n_lpr;
+
+	float k_thres_seeds = 0.5;
+	PointCloud<PointXYZI>::Ptr seeds(new PointCloud<PointXYZI>);
+    for(int i = 0; i < ori_cloud->points.size(); i++)
+    {
+        if(isnan(ori_cloud->points[i].x) || isnan(ori_cloud->points[i].y) || isnan(ori_cloud->points[i].z))
+        {
+            continue;
+        }
+        if(ori_cloud->points[i].z < LPR_height + k_thres_seeds)
+        {
+            seeds->push_back(ori_cloud->points[i]);
+        }
+    }
+
+	// estimatePlane();
+	Eigen::Matrix3f cov;
+    Eigen::Vector4f mean;
+    computeMeanAndCovarianceMatrix(*seeds, cov, mean);
+    Eigen::JacobiSVD<Eigen::Matrix3f> svd(cov, Eigen::DecompositionOptions::ComputeFullU);
+    Eigen::Vector3f norm_vector = svd.matrixU().col(2);
+    auto mean_point = mean.head<3>();
+    double d = norm_vector.transpose() * mean_point;
+
+	Eigen::Vector3f pt_vec;
+	const int k_thres_dist = 0.1;
+	for(auto pt:ori_cloud->points) 
+	{
+		if(isnan(pt.x) || isnan(pt.y) || isnan(pt.z))
+			continue;
+		pt_vec.x() = pt.x;
+		pt_vec.y() = pt.y;
+		pt_vec.z() = pt.z;
+		if(norm_vector.transpose() * pt_vec - d > k_thres_dist)
+			filtered_cloud->points.push_back(pt);
+	}
+	filtered_cloud->width = filtered_cloud->size();
 }

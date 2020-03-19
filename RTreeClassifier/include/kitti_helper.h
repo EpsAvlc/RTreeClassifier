@@ -31,6 +31,8 @@ public:
     void ExtractClusters(const std::string& cloudfile, 
         const std::string& labelfile, const std::string& calibfile,
         std::vector<pcl::PointCloud<pcl::PointXYZI>::Ptr>& clusters);
+    void RemoveGround(pcl::PointCloud<pcl::PointXYZI>::Ptr ori_cloud, 
+    pcl::PointCloud<pcl::PointXYZI>::Ptr filtered_cloud);
 
 private:
     void split(std::string& s, char delim, std::vector<std::string>& strs);
