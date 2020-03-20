@@ -6,6 +6,7 @@ find_package(PCL REQUIRED)
 
 include_directories(
     include
+    utils
     ${PCL_INCLUDE_DIRS}
 )
 
