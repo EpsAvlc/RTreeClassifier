@@ -6,7 +6,8 @@
  *
  * Author: EpsAvlc
  */
-
+#ifndef EVDESCRIPTRO_H__
+#define EVDESCRIPTOR_H__
 #include <iostream>
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
@@ -19,6 +20,7 @@
 class EVDescriptor
 {
 public:
-    void ExtractDescriptor(const pcl::PointCloud<pcl::PointXYZI>::Ptr cluster, 
+    static void ExtractDescriptor(const pcl::PointCloud<pcl::PointXYZI>::Ptr cluster, 
         Eigen::VectorXf& ev_descriptor);
 };
+#endif // !EVDESCRIPTRO_H__

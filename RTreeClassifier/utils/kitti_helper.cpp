@@ -85,21 +85,22 @@ void KITTIHelper::ParseLabel(const std::string& infile, std::vector<BBox>& bboxe
 		{
 			bbox.type = 0;
 		}
-		else if(bbox_strs[0].compare("Van") == 0)
-		{
-			bbox.type = 1;	
-		}
-		else if(bbox_strs[0].compare("Trunk") == 0)
-		{
-			bbox.type = 2;	
-		}
+		// else if(bbox_strs[0].compare("Van") == 0)
+		// {
+		// 	bbox.type = 1;	
+		// }
+		// else if(bbox_strs[0].compare("Trunk") == 0)
+		// {
+		// 	bbox.type = 2;	
+		// }
 		else if(bbox_strs[0].compare("Pedestrian") == 0)
 		{
-			bbox.type = 3;	
+			bbox.type = 1;
+			// bbox.type = 3;	
 		}
 		else if(bbox_strs[0].compare("Cyclist") == 0)
 		{
-			bbox.type = 4;	
+			bbox.type = 2;	
 		}
 		else
 		{
@@ -176,9 +177,10 @@ void KITTIHelper::ParseCalib(const std::string& infile, Eigen::MatrixXf& velo_to
 	// cout <<velo_to_cam << endl;
 }
 
-void KITTIHelper::ExtractClusters(const std::string& cloudfile, 
-        const std::string& labelfile, const std::string& calibfile,
-        std::vector<pcl::PointCloud<pcl::PointXYZI>::Ptr>& clusters)
+void KITTIHelper::ExtractClusters(const string& cloudfile, 
+        const string& labelfile, const string& calibfile,
+        vector<PointCloud<PointXYZI>::Ptr>& clusters, vector<uint>& labels,
+		int size_thres)
 {
 	PointCloud<PointXYZI>::Ptr cloud(new PointCloud<PointXYZI>);
     ReadPointCloud(cloudfile, cloud); 
@@ -255,7 +257,11 @@ void KITTIHelper::ExtractClusters(const std::string& cloudfile,
 		cb.setMax(Eigen::Vector4f(x_max, y_max, z_max, 0));
 		cb.filter(*cluster);
 
+		if(cluster->size() < size_thres)
+			continue;
+
 		clusters.push_back(cluster);
+		labels.push_back(bboxes[i].type);
 	}
 }
 

@@ -30,7 +30,8 @@ public:
     void ParseCalib(const std::string& infile, Eigen::MatrixXf& velo_to_cam, Eigen::Matrix3f& R0_rect);
     void ExtractClusters(const std::string& cloudfile, 
         const std::string& labelfile, const std::string& calibfile,
-        std::vector<pcl::PointCloud<pcl::PointXYZI>::Ptr>& clusters);
+        std::vector<pcl::PointCloud<pcl::PointXYZI>::Ptr>& clusters,
+        std::vector<uint>& labels, int size_thres);
     void RemoveGround(pcl::PointCloud<pcl::PointXYZI>::Ptr ori_cloud, 
     pcl::PointCloud<pcl::PointXYZI>::Ptr filtered_cloud);
 

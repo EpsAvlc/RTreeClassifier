@@ -17,7 +17,7 @@ RForest::RForest(string model_path)
 {
   if(model_path.empty())
   {
-    rtrees_->create();
+    rtrees_ = ml::RTrees::create();
     rtrees_->setMaxDepth(10);
     rtrees_->setMinSampleCount(10);
     rtrees_->setRegressionAccuracy(0);
@@ -36,8 +36,8 @@ RForest::RForest(string model_path)
   
 }
 
-void RForest::Train(const Eigen::MatrixXd& features, 
-const Eigen::MatrixXd& labels)
+void RForest::Train(const Eigen::MatrixXf& features, 
+const Eigen::MatrixXf& labels)
 {
   const unsigned int n_training_samples = features.rows();
   const unsigned int descriptors_dimension = features.cols();
@@ -54,5 +54,62 @@ const Eigen::MatrixXd& labels)
   }
 
   Ptr<ml::TrainData> tdata;
-  tdata->create(opencv_features, ml::SampleTypes::ROW_SAMPLE, opencv_labels);
+  tdata = ml::TrainData::create(opencv_features, ml::SampleTypes::ROW_SAMPLE, opencv_labels);
+
+  rtrees_->train(tdata);
+}
+
+void RForest::Test(const Eigen::MatrixXf& features, const Eigen::MatrixXf& labels)
+{
+  const unsigned int n_samples = features.rows();
+  const unsigned int descriptors_dimension = features.cols();
+  LOG(INFO)<< "Testing the random forest with " << n_samples
+  << " samples of dimension " << descriptors_dimension << ".";
+
+  if (n_samples > 0u) 
+  {
+    unsigned int tp = 0u, fp = 0u, tn = 0u, fn = 0u;
+    for (unsigned int i = 0u; i < n_samples; ++i) {
+      Mat opencv_sample(1, descriptors_dimension, CV_32FC1);
+      for (unsigned int j = 0u; j < descriptors_dimension; ++j) {
+        opencv_sample.at<float>(j) = features(i, j);
+      }
+      float probability = rtrees_->predict(opencv_sample);
+      if (fabs(probability - labels(i, 0)) <= 0.49) {
+          ++tp;
+        } else {
+          ++fp;
+        }
+    }
+    displayPerformances(tp, tn, fp, fn);
+  }
+}
+
+void RForest::displayPerformances(unsigned int tp, unsigned int tn,
+                                unsigned int fp, unsigned int fn) {
+
+  LOG(INFO) << "TP: " << tp << ", TN: " << tn <<
+      ", FP: " << fp << ", FN: " << fn << ".";
+
+  const double true_positive_rate = double(tp) / double(tp + fn);
+  const double true_negative_rate = double(tn) / double(fp + tn);
+  const double false_positive_rate = 1.0 - true_negative_rate;
+
+  LOG(INFO) << "Accuracy (ACC): " << double(tp + tn) /
+      double(tp + fp + tn + fn);
+  LOG(INFO) << "Sensitivity (TPR): " << true_positive_rate;
+  LOG(INFO) << "Specificity (TNR): " << true_negative_rate;
+  LOG(INFO) << "Precision: " << double(tp) / double(tp + fp);
+  LOG(INFO) << "Positive likelyhood ratio: " << true_positive_rate / false_positive_rate;
+}
+
+template <typename T>
+inline bool in(const T& obj, const std::vector<T>& vec, size_t* index = NULL) {
+  for (size_t i = 0u; i < vec.size(); ++i) {
+    if (obj == vec.at(i)) {
+      if (index != NULL) { *index = i; }
+      return true;
+    }
+  }
+  return false;
 }

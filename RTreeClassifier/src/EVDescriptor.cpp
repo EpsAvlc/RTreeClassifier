@@ -29,8 +29,10 @@ void EVDescriptor::ExtractDescriptor(const PointCloud<PointXYZI>::Ptr cluster,
     eigenvalues.at(2) = eigenvalues_solver.eigenvalues()[2].real();
     if (eigenvalues_solver.eigenvalues()[0].imag() != 0.0 ||
         eigenvalues_solver.eigenvalues()[1].imag() != 0.0 ||
-        eigenvalues_solver.eigenvalues()[2].imag() != 0.0 ) {
+        eigenvalues_solver.eigenvalues()[2].imag() != 0.0 )
+    {
     cerr << __FUNCTION__ << ": Eigenvalues should not have non-zero imaginary component." << endl;
+    }
 
     // Sort eigenvalues from smallest to largest.
 	sort(eigenvalues.begin(),eigenvalues.end(), 
@@ -65,7 +67,7 @@ void EVDescriptor::ExtractDescriptor(const PointCloud<PointXYZI>::Ptr cluster,
 
     const double kNPointsMax = 13200 * kNormalizationPercentile;
 
-    ev_descriptor = Eigen::VectorXf::Zero();
+    ev_descriptor = Eigen::VectorXf::Zero(7);
     // linearity
     ev_descriptor(0) = (e1 - e2) / e1 / kLinearityMax;
     // planarity
