@@ -18,16 +18,24 @@ RForest::RForest(string model_path)
   if(model_path.empty())
   {
     rtrees_ = ml::RTrees::create();
-    rtrees_->setMaxDepth(10);
-    rtrees_->setMinSampleCount(10);
+    rtrees_->setMaxDepth(20);
+    rtrees_->setMinSampleCount(25);
     rtrees_->setRegressionAccuracy(0);
     rtrees_->setUseSurrogates(false);
     rtrees_->setMaxCategories(15);
     rtrees_->setPriors(Mat());
     rtrees_->setCalculateVarImportance(true);
+    rtrees_->setUse1SERule(true);
     rtrees_->setActiveVarCount(4);
     TermCriteria Tc(TermCriteria::MAX_ITER + TermCriteria::EPS, 100, 0.01f);
     rtrees_->setTermCriteria(Tc);
+    Mat priors(4, 1, CV_32FC1);
+    priors.at<float>(0, 0) = 0.1;
+    priors.at<float>(0, 0) = 0.7;
+    priors.at<float>(0, 0) = 0.1;
+    priors.at<float>(0, 0) = 0.1;
+    rtrees_->setPriors(priors);
+    // rtrees_->setCVFolds(10);
   }
   else
   {
@@ -43,6 +51,15 @@ const Eigen::MatrixXf& labels)
   const unsigned int descriptors_dimension = features.cols();
   LOG(INFO) << "Training RF with " << n_training_samples << " of dimension "
   << descriptors_dimension << ".";
+  int label_count[6] = {};
+  for(int i = 0; i < n_training_samples; i++)
+  {
+    label_count[(int)labels(i, 0)] ++;
+  }
+  for(int i = 0; i < 6; i++)
+  {
+    LOG(INFO) << "Class " << i << " has " << label_count[i] << " samples.";
+  }
 
   Mat opencv_features(n_training_samples, descriptors_dimension, CV_32FC1);
   Mat opencv_labels(n_training_samples, 1, CV_32FC1);
@@ -66,6 +83,16 @@ void RForest::Test(const Eigen::MatrixXf& features, const Eigen::MatrixXf& label
   LOG(INFO)<< "Testing the random forest with " << n_samples
   << " samples of dimension " << descriptors_dimension << ".";
 
+  int label_count[6] = {};
+  for(int i = 0; i < n_samples; i++)
+  {
+    label_count[(int)labels(i, 0)] ++;
+  }
+  for(int i = 0; i < 6; i++)
+  {
+    LOG(INFO) << "Class " << i << " has " << label_count[i] << " samples.";
+  }
+
   if (n_samples > 0u) 
   {
     unsigned int tp = 0u, fp = 0u, tn = 0u, fn = 0u;
@@ -83,6 +110,11 @@ void RForest::Test(const Eigen::MatrixXf& features, const Eigen::MatrixXf& label
     }
     displayPerformances(tp, tn, fp, fn);
   }
+}
+
+void RForest::SaveModel(string file_path)
+{
+  rtrees_->save(file_path);
 }
 
 void RForest::displayPerformances(unsigned int tp, unsigned int tn,
@@ -103,13 +135,13 @@ void RForest::displayPerformances(unsigned int tp, unsigned int tn,
   LOG(INFO) << "Positive likelyhood ratio: " << true_positive_rate / false_positive_rate;
 }
 
-template <typename T>
-inline bool in(const T& obj, const std::vector<T>& vec, size_t* index = NULL) {
-  for (size_t i = 0u; i < vec.size(); ++i) {
-    if (obj == vec.at(i)) {
-      if (index != NULL) { *index = i; }
-      return true;
-    }
+float RForest::Predict(const Eigen::VectorXf& feature)
+{
+  Mat opencv_sample(1, feature.rows(), CV_32FC1);
+  for (unsigned int i = 0u; i < feature.rows(); ++i) 
+  {
+    opencv_sample.at<float>(i) = feature(i, 0);
   }
-  return false;
+
+  return rtrees_->predict(opencv_sample);
 }

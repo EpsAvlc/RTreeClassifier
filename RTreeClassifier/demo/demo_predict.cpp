@@ -20,7 +20,7 @@ using namespace cv;
 
 int main(int argc, char** argv)
 {
-    FileStorage fs("/home/cm/Workspaces/RtreeClassifier/RTreeClassifier/demo/demo_train.yaml", FileStorage::READ);
+    FileStorage fs("/home/cm/Workspaces/RtreeClassifier/RTreeClassifier/demo/demo_predict.yaml", FileStorage::READ);
 
     int cloud_index;
     fs["cloud_index"] >> cloud_index;
@@ -72,8 +72,8 @@ int main(int argc, char** argv)
         PointXYZI centroid;
         computeCentroid(*clusters[i], centroid);
         viewer->addText3D(label_str, centroid, 0.5, 1.0, 0, 0, "text_" + to_string(i));
-        cout << label << endl;
-        cout << prob << endl;
+        // cout << label << endl;
+        // cout << prob << endl;
     }
 
 

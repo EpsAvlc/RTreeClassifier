@@ -30,10 +30,12 @@ public:
     RForest(std::string model_path="");
     void Train(const Eigen::MatrixXf& features, const Eigen::MatrixXf& labels);
     void Test(const Eigen::MatrixXf& features, const Eigen::MatrixXf& label);
-    void displayPerformances(unsigned int tp, unsigned int tn,
-            unsigned int fp, unsigned int fn);
+    void SaveModel(const std::string model_path);
+    float Predict(const Eigen::VectorXf& feature);
 private:
     cv::Ptr<cv::ml::RTrees> rtrees_;
+    void displayPerformances(unsigned int tp, unsigned int tn,
+        unsigned int fp, unsigned int fn);
 };
 
 #endif

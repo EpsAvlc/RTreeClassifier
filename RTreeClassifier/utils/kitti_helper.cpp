@@ -23,6 +23,7 @@ using namespace pcl;
 void KITTIHelper::ReadPointCloud(const std::string& infile, 
     pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud_ptr)
 {
+	cloud_ptr.reset(new PointCloud<PointXYZI>);
     fstream input(infile.c_str(), ios::in | ios::binary);
 	if(!input.good()){
 		cerr << "Could not read file: " << infile << endl;
@@ -73,6 +74,8 @@ void KITTIHelper::ParseLabel(const std::string& infile, std::vector<BBox>& bboxe
 	{
 		string bbox_str;
 		getline(input, bbox_str);
+		if(bbox_str.empty())
+			continue;
 		vector<string> bbox_strs;
 		split(bbox_str, ' ', bbox_strs);
 		if(bbox_strs[0].compare("DontCare") == 0)
@@ -104,11 +107,11 @@ void KITTIHelper::ParseLabel(const std::string& infile, std::vector<BBox>& bboxe
 		}
 		else
 		{
-			continue;
+			bbox.type = 3;
 		}
 
 		// If the object is occluded, skip.
-		if(atoi(bbox_strs[2].c_str()) != 0)
+		if(atoi(bbox_strs[2].c_str()) > 2)
 		{
 			continue;
 		}
@@ -200,6 +203,7 @@ void KITTIHelper::ExtractClusters(const string& cloudfile,
 	cam2velo.block(0, 3, 3, 1) = -velo2cam.block(0, 0, 3, 3).transpose() * 
 		velo2cam.block(0, 3, 3, 1);
 
+	// #pragma omp parallel for
 	for(int i = 0; i < bboxes.size(); i++)
 	{
 		float l = bboxes[i].length;

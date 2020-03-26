@@ -39,3 +39,20 @@ EVDescriptor
 RForest
 glog
 )
+
+add_executable(demo_train_test demo/demo_train_test.cpp)
+target_link_libraries(demo_train_test 
+KITTIHelper
+EVDescriptor
+RForest
+glog
+)
+
+add_executable(demo_predict demo/demo_predict.cpp)
+target_link_libraries(demo_predict 
+KITTIHelper
+EVDescriptor
+RForest
+glog
+)
+
