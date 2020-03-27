@@ -20,6 +20,12 @@
 class EVDescriptor
 {
 public:
+/**
+ * @brief Extract descriptors from clusters.
+ * 
+ * @param cluster input point cloud clusters.
+ * @param ev_descriptor output descriptors. See SegMatch.
+ */
     static void ExtractDescriptor(const pcl::PointCloud<pcl::PointXYZI>::Ptr cluster, 
         Eigen::VectorXf& ev_descriptor);
 };
