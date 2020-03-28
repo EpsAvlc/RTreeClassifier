@@ -84,7 +84,8 @@ void KITTIHelper::ParseLabel(const std::string& infile, std::vector<BBox>& bboxe
 		}
 		
 		BBox bbox;		
-		if(bbox_strs[0].compare("Car") == 0)
+		if(bbox_strs[0].compare("Car") == 0 || bbox_strs[0].compare("Van") == 0 ||
+			bbox_strs[0].compare("Tram") == 0)
 		{
 			bbox.type = 0;
 		}
@@ -96,18 +97,18 @@ void KITTIHelper::ParseLabel(const std::string& infile, std::vector<BBox>& bboxe
 		// {
 		// 	bbox.type = 2;	
 		// }
-		else if(bbox_strs[0].compare("Pedestrian") == 0)
+		// else if(bbox_strs[0].compare("Pedestrian") == 0)
+		// {
+		// 	bbox.type = 1;
+		// 	// bbox.type = 3;	
+		// }
+		else if(bbox_strs[0].compare("Cyclist") == 0 ||bbox_strs[0].compare("Pedestrain") || bbox_strs[0].compare("Person_sitting") == 0)
 		{
-			bbox.type = 1;
-			// bbox.type = 3;	
-		}
-		else if(bbox_strs[0].compare("Cyclist") == 0)
-		{
-			bbox.type = 2;	
+			bbox.type = 1;	
 		}
 		else
 		{
-			bbox.type = 3;
+			bbox.type = 2;
 		}
 
 		// If the object is occluded, skip.

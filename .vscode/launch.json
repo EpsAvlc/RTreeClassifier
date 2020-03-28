@@ -8,7 +8,7 @@
             "name": "(gdb) Launch",
             "type": "cppdbg",
             "request": "launch",
-            "program": "/home/cm/Workspaces/RtreeClassifier/build/demo",
+            "program": "/home/cm/Workspaces/RtreeClassifier/build/demo_train_test",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",

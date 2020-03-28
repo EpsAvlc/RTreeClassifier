@@ -19,7 +19,7 @@ RForest::RForest(string model_path)
   {
     rtrees_ = ml::RTrees::create();
     rtrees_->setMaxDepth(20);
-    rtrees_->setMinSampleCount(25);
+    rtrees_->setMinSampleCount(5);
     rtrees_->setRegressionAccuracy(0);
     rtrees_->setUseSurrogates(false);
     rtrees_->setMaxCategories(15);
@@ -29,12 +29,12 @@ RForest::RForest(string model_path)
     rtrees_->setActiveVarCount(4);
     TermCriteria Tc(TermCriteria::MAX_ITER + TermCriteria::EPS, 100, 0.01f);
     rtrees_->setTermCriteria(Tc);
-    Mat priors(4, 1, CV_32FC1);
-    priors.at<float>(0, 0) = 0.1;
-    priors.at<float>(0, 0) = 0.7;
-    priors.at<float>(0, 0) = 0.1;
-    priors.at<float>(0, 0) = 0.1;
-    rtrees_->setPriors(priors);
+    // Mat priors(4, 1, CV_32FC1);
+    // priors.at<float>(0, 0) = 0.1;
+    // priors.at<float>(0, 0) = 0.7;
+    // priors.at<float>(0, 0) = 0.1;
+    // priors.at<float>(0, 0) = 0.1;
+    // rtrees_->setPriors(priors);
     // rtrees_->setCVFolds(10);
   }
   else

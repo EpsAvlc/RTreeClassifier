@@ -5,6 +5,7 @@
 #include <pcl/filters/crop_box.h>
 #include <thread>
 #include <chrono>
+#include <mutex>
 
 #include "kitti_helper.h"
 #include "EVDescriptor.h"
@@ -27,7 +28,9 @@ void GetDescriptorsAndLabels(int start, int end,
 
     vector<Eigen::VectorXf> all_descriptors;
     vector<int> all_labels;
-    // #pragma omp parallel for
+    int task_count = 1;
+    mutex vec_mutex;
+    #pragma omp parallel for
     for(int i = start; i < end; i++)
     {
         char index[6];
@@ -46,10 +49,12 @@ void GetDescriptorsAndLabels(int start, int end,
             EVDescriptor::ExtractDescriptor(clusters[j], des);
             descriptors.push_back(des);
         }
-
+        lock_guard<mutex> lock(vec_mutex);        
         all_descriptors.insert(all_descriptors.end(), descriptors.begin(), descriptors.end());
         all_labels.insert(all_labels.end(), labels.begin(), labels.end());
-        LOG(INFO) << "Complete the " << i << " th file.";
+        LOG(INFO) << "Complete the " << task_count << " th file of " 
+        << end - start <<" files.";
+        task_count ++;
     }
 
     CHECK_EQ(all_descriptors.size(), all_labels.size());
@@ -60,7 +65,7 @@ void GetDescriptorsAndLabels(int start, int end,
         vector<int> car_index;
         for(int i = 0; i < all_labels.size(); i++)
         {
-            int car_count = 0;
+            static int car_count = 0;
             if(all_labels[i] == 0)
             {
                 car_count ++;
@@ -84,8 +89,8 @@ void GetDescriptorsAndLabels(int start, int end,
             final_descriptors.push_back(all_descriptors[car_index[i]]);
             final_labels.push_back(all_labels[car_index[i]]);
         }
-        swap(all_descriptors, final_descriptors);
-        swap(all_labels, final_labels);
+        std::swap(all_descriptors, final_descriptors);
+        std::swap(all_labels, final_labels);
     }
 
     descriptor_matrix = Eigen::MatrixXf::Zero(7, all_descriptors.size());
@@ -98,10 +103,7 @@ void GetDescriptorsAndLabels(int start, int end,
     label_matrix = Eigen::MatrixXf::Zero(all_labels.size(), 1);
     for(int i = 0; i < all_labels.size(); i++)
     {
-        if(all_labels[i] == 1)
-            label_matrix(i, 0) = all_labels[i];
-        else
-            label_matrix(i, 0) = 0;
+        label_matrix(i, 0) = all_labels[i];
     }
 }
 
@@ -116,10 +118,10 @@ int main(int argc, char** argv)
     RForest rf;
     Eigen::MatrixXf descriptor_matrix;
     Eigen::MatrixXf label_matrix;
-    GetDescriptorsAndLabels(0, 800, descriptor_matrix, label_matrix, true);
+    GetDescriptorsAndLabels(0, 1600, descriptor_matrix, label_matrix, false);
     rf.Train(descriptor_matrix, label_matrix);
     rf.SaveModel("/home/cm/Workspaces/RtreeClassifier/RTreeClassifier/model/kitti.xml");
-    GetDescriptorsAndLabels(801, 1000, descriptor_matrix, label_matrix, false);
+    GetDescriptorsAndLabels(1601, 2000, descriptor_matrix, label_matrix, false);
     rf.Test(descriptor_matrix, label_matrix);
     return 0;
 }

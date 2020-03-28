@@ -20,7 +20,7 @@ using namespace cv;
 
 int main(int argc, char** argv)
 {
-    FileStorage fs("/home/cm/Workspaces/RtreeClassifier/RTreeClassifier/demo/demo_predict.yaml", FileStorage::READ);
+    FileStorage fs("/home/cm/Workspaces/RtreeClassifier/RTreeClassifier/demo/config/demo_predict.yaml", FileStorage::READ);
 
     int cloud_index;
     fs["cloud_index"] >> cloud_index;
@@ -65,8 +65,6 @@ int main(int argc, char** argv)
             label_str = "Car";
         else if(label == 1)
             label_str = "Pedestrian";
-        else if(label == 2)
-            label_str = "Cyclist";
         else
             label_str = "Others";
         PointXYZI centroid;
