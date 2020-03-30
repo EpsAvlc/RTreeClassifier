@@ -29,7 +29,7 @@ ${PCL_LIBRARIES})
 add_library(RForest src/RForest.cpp)
 target_link_libraries(RForest ${OpenCV_LIBS})
 
-add_library(EVDescriptor src/EVDescriptor.cpp)
+add_library(EVDescriptor src/descriptors/EVDescriptor.cpp)
 target_link_libraries(EVDescriptor ${PCL_LIBRARIES})
 
 add_executable(demo src/main.cpp)
