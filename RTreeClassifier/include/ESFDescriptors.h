@@ -19,7 +19,7 @@
 class ESFDescriptor
 {
 public:
-    void ExtractDescriptor(const pcl::PointCloud<pcl::PointXYZI>::Ptr cluster, 
+    void ExtractDescriptor(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cluster, 
         Eigen::VectorXf& ev_descriptor);
 private:
     pcl::ESFEstimation<pcl::PointXYZI, pcl::ESFSignature640> esf_estimator_;

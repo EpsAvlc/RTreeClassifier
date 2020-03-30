@@ -32,6 +32,9 @@ target_link_libraries(RForest ${OpenCV_LIBS})
 add_library(EVDescriptor src/descriptors/EVDescriptor.cpp)
 target_link_libraries(EVDescriptor ${PCL_LIBRARIES})
 
+add_library(ESFDescriptor src/descriptors/ESFDescriptor.cpp)
+target_link_libraries(ESFDescriptor ${PCL_LIBRARIES})
+
 add_executable(demo src/main.cpp)
 target_link_libraries(demo 
 KITTIHelper
@@ -44,6 +47,7 @@ add_executable(demo_train_test demo/demo_train_test.cpp)
 target_link_libraries(demo_train_test 
 KITTIHelper
 EVDescriptor
+ESFDescriptor
 RForest
 glog
 )

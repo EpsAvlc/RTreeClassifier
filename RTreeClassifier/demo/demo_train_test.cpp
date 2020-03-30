@@ -9,6 +9,7 @@
 
 #include "kitti_helper.h"
 #include "EVDescriptor.h"
+#include "ESFDescriptors.h"
 #include "RForest.h"
 #include "common.h"
 
@@ -33,6 +34,7 @@ void GetDescriptorsAndLabels(int start, int end,
     #pragma omp parallel for
     for(int i = start; i < end; i++)
     {
+        ESFDescriptor esf_des;
         char index[6];
         sprintf(index, "%06d", i);
         string cloudfile = cloudfile_path + string(index) + ".bin";
@@ -46,7 +48,8 @@ void GetDescriptorsAndLabels(int start, int end,
         for(int j = 0; j < clusters.size(); j++)
         {
             Eigen::VectorXf des;
-            EVDescriptor::ExtractDescriptor(clusters[j], des);
+            // EVDescriptor::ExtractDescriptor(clusters[j], des);
+            esf_des.ExtractDescriptor(clusters[j], des);
             descriptors.push_back(des);
         }
         lock_guard<mutex> lock(vec_mutex);        
@@ -93,10 +96,11 @@ void GetDescriptorsAndLabels(int start, int end,
         std::swap(all_labels, final_labels);
     }
 
-    descriptor_matrix = Eigen::MatrixXf::Zero(7, all_descriptors.size());
+    int feature_dim = all_descriptors[0].size();
+    descriptor_matrix = Eigen::MatrixXf::Zero(feature_dim, all_descriptors.size());
     for(int i = 0; i < all_descriptors.size(); i++)
     {
-        descriptor_matrix.block(0, i, 7, 1) = all_descriptors[i];
+        descriptor_matrix.block(0, i, feature_dim, 1) = all_descriptors[i];
     }
     descriptor_matrix.transposeInPlace();
 
@@ -120,7 +124,7 @@ int main(int argc, char** argv)
     Eigen::MatrixXf label_matrix;
     GetDescriptorsAndLabels(0, 1600, descriptor_matrix, label_matrix, false);
     rf.Train(descriptor_matrix, label_matrix);
-    rf.SaveModel("/home/cm/Workspaces/RtreeClassifier/RTreeClassifier/model/kitti.xml");
+    rf.SaveModel("/home/cm/Workspaces/RtreeClassifier/RTreeClassifier/model/kitti_esf.xml");
     GetDescriptorsAndLabels(1601, 2000, descriptor_matrix, label_matrix, false);
     rf.Test(descriptor_matrix, label_matrix);
     return 0;
